@@ -23,7 +23,7 @@ const hideLoadMore = () => loadMoreBtn.classList.add('hidden');
 
 // Card HTML
 const createImageCard = ({ webformatURL, largeImageURL, tags, likes, views, comments, downloads }) => `
-  <div class="photo-card">
+  <li class="photo-card">
     <a href="${largeImageURL}" data-lightbox="gallery">
       <img src="${webformatURL}" alt="${tags}" loading="lazy" />
     </a>
@@ -33,7 +33,7 @@ const createImageCard = ({ webformatURL, largeImageURL, tags, likes, views, comm
       <div class="info-item-wrapper"><p class="info-item"><b>Comments</b></p><p class="info-item">${comments}</p></div>
       <div class="info-item-wrapper"><p class="info-item"><b>Downloads</b></p><p class="info-item">${downloads}</p></div>
     </div>
-  </div>
+  </li>
 `;
 
 const renderImages = images => {
