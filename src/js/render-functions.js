@@ -7,18 +7,21 @@ import { fetchImages } from './pixabay-api';
 const form = document.getElementById('search-form');
 const gallery = document.querySelector('.gallery');
 const loader = document.getElementById('loader');
+const loadMoreBtn = document.getElementById('load-more');
 
 let query = '';
 let page = 1;
 let totalHits = 0;
-let lightbox;
-let observerActive = true;
+let loadedImages = 0;
+let lightbox = null;
 
-// Loader control
+// UI Controls
 const showLoader = () => loader.classList.remove('hidden');
 const hideLoader = () => loader.classList.add('hidden');
+const showLoadMore = () => loadMoreBtn.classList.remove('hidden');
+const hideLoadMore = () => loadMoreBtn.classList.add('hidden');
 
-// Markup generator
+// Card HTML
 const createImageCard = ({ webformatURL, largeImageURL, tags, likes, views, comments, downloads }) => `
   <div class="photo-card">
     <a href="${largeImageURL}" data-lightbox="gallery">
@@ -42,6 +45,13 @@ const renderImages = images => {
   } else {
     lightbox.refresh();
   }
+
+  // Smooth scroll
+  const card = document.querySelector('.gallery .photo-card');
+  if (card) {
+    const { height: cardHeight } = card.getBoundingClientRect();
+    window.scrollBy({ top: cardHeight * 2, behavior: 'smooth' });
+  }
 };
 
 const handleSearch = async event => {
@@ -54,71 +64,63 @@ const handleSearch = async event => {
   }
 
   page = 1;
+  loadedImages = 0;
   gallery.innerHTML = '';
-  observer.unobserve(sentinel);
-
+  hideLoadMore();
   showLoader();
+
   try {
     const data = await fetchImages(query, page);
     hideLoader();
 
     if (!data || data.hits.length === 0) {
-      iziToast.warning({ title: 'No results', message: 'Sorry, there are no images matching your search query. Please try again!' });
+      iziToast.warning({ title: 'No results', message: 'No images found. Try another query.' });
       return;
     }
 
     totalHits = data.totalHits;
-    iziToast.success({ title: 'Hooray!', message: `We found ${totalHits} images.` });
+    loadedImages += data.hits.length;
+
+    iziToast.success({ title: 'Success', message: `We found ${totalHits} images.` });
 
     renderImages(data.hits);
-    observer.observe(sentinel);
+    if (loadedImages < totalHits) showLoadMore();
+    else iziToast.info({ title: 'End', message: "You've reached the end of search results." });
 
-    if (data.hits.length < 40) {
-      iziToast.warning({ title: 'End of results', message: "You've reached the end of search results." });
-    }
   } catch (error) {
     hideLoader();
     iziToast.error({ title: 'Error', message: 'Something went wrong.' });
   }
 };
 
-form.addEventListener('submit', handleSearch);
-
 const loadMoreImages = async () => {
-  if (query && page * 40 < totalHits) {
-    page += 1;
-    showLoader();
-    try {
-      const data = await fetchImages(query, page);
-      hideLoader();
+  page += 1;
+  showLoader();
+  hideLoadMore();
 
-      renderImages(data.hits);
+  try {
+    const data = await fetchImages(query, page);
+    hideLoader();
 
-      if (data.hits.length < 40 || page * 40 >= totalHits) {
-        iziToast.warning({ title: 'End of results', message: "You've reached the end of search results." });
-        observer.unobserve(sentinel);
-      }
-    } catch (error) {
-      hideLoader();
-      iziToast.error({ title: 'Error', message: 'Failed to load more images.' });
+    if (!data || data.hits.length === 0) {
+      iziToast.info({ title: 'End', message: "You've reached the end of search results." });
+      return;
     }
+
+    loadedImages += data.hits.length;
+    renderImages(data.hits);
+
+    if (loadedImages >= totalHits) {
+      iziToast.info({ title: 'End', message: "You've reached the end of search results." });
+    } else {
+      showLoadMore();
+    }
+
+  } catch (error) {
+    hideLoader();
+    iziToast.error({ title: 'Error', message: 'Failed to load more images.' });
   }
 };
 
-const handleIntersection = entries => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting && observerActive) {
-      loadMoreImages();
-    }
-  });
-};
-
-const observer = new IntersectionObserver(handleIntersection, {
-  rootMargin: '200px',
-});
-
-// Create and observe sentinel
-const sentinel = document.createElement('div');
-sentinel.className = 'sentinel';
-document.body.appendChild(sentinel);
-observer.observe(sentinel);
+form.addEventListener('submit', handleSearch);
+loadMoreBtn.addEventListener('click', loadMoreImages);

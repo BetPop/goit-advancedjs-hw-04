@@ -180,3 +180,19 @@ body {
 }
 .hidden {
     display: none; }
+
+.load-more {
+    display: block;
+    margin: 20px auto;
+    padding: 10px 20px;
+    font-size: 18px;
+    border: none;
+    background-color: #4e75ff;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.load-more.hidden {
+    display: none;
+}
