@@ -1,27 +1,19 @@
-import iziToast from 'izitoast';
-import 'izitoast/dist/css/iziToast.min.css';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
-import { fetchImages } from './pixabay-api';
 
-const form = document.getElementById('search-form');
+let lightbox;
 const gallery = document.querySelector('.gallery');
-const loader = document.getElementById('loader');
-const loadMoreBtn = document.getElementById('load-more');
 
-let query = '';
-let page = 1;
-let totalHits = 0;
-let loadedImages = 0;
-let lightbox = null;
+export const showLoader = () => document.getElementById('loader').classList.remove('hidden');
+export const hideLoader = () => document.getElementById('loader').classList.add('hidden');
 
-// UI Controls
-const showLoader = () => loader.classList.remove('hidden');
-const hideLoader = () => loader.classList.add('hidden');
-const showLoadMore = () => loadMoreBtn.classList.remove('hidden');
-const hideLoadMore = () => loadMoreBtn.classList.add('hidden');
+export const showLoadMore = () => document.getElementById('load-more').classList.remove('hidden');
+export const hideLoadMore = () => document.getElementById('load-more').classList.add('hidden');
 
-// Card HTML
+export const clearGallery = () => {
+  gallery.innerHTML = '';
+};
+
 const createImageCard = ({ webformatURL, largeImageURL, tags, likes, views, comments, downloads }) => `
   <li class="photo-card">
     <a href="${largeImageURL}" data-lightbox="gallery">
@@ -36,7 +28,7 @@ const createImageCard = ({ webformatURL, largeImageURL, tags, likes, views, comm
   </li>
 `;
 
-const renderImages = images => {
+export const renderImages = images => {
   const markup = images.map(createImageCard).join('');
   gallery.insertAdjacentHTML('beforeend', markup);
 
@@ -53,74 +45,3 @@ const renderImages = images => {
     window.scrollBy({ top: cardHeight * 2, behavior: 'smooth' });
   }
 };
-
-const handleSearch = async event => {
-  event.preventDefault();
-  query = event.currentTarget.elements.searchQuery.value.trim();
-
-  if (!query) {
-    iziToast.warning({ title: 'Warning', message: 'Please enter a valid search query.' });
-    return;
-  }
-
-  page = 1;
-  loadedImages = 0;
-  gallery.innerHTML = '';
-  hideLoadMore();
-  showLoader();
-
-  try {
-    const data = await fetchImages(query, page);
-    hideLoader();
-
-    if (!data || data.hits.length === 0) {
-      iziToast.warning({ title: 'No results', message: 'No images found. Try another query.' });
-      return;
-    }
-
-    totalHits = data.totalHits;
-    loadedImages += data.hits.length;
-
-    iziToast.success({ title: 'Success', message: `We found ${totalHits} images.` });
-
-    renderImages(data.hits);
-    if (loadedImages < totalHits) showLoadMore();
-    else iziToast.info({ title: 'End', message: "You've reached the end of search results." });
-
-  } catch (error) {
-    hideLoader();
-    iziToast.error({ title: 'Error', message: 'Something went wrong.' });
-  }
-};
-
-const loadMoreImages = async () => {
-  page += 1;
-  showLoader();
-  hideLoadMore();
-
-  try {
-    const data = await fetchImages(query, page);
-    hideLoader();
-
-    if (!data || data.hits.length === 0) {
-      iziToast.info({ title: 'End', message: "You've reached the end of search results." });
-      return;
-    }
-
-    loadedImages += data.hits.length;
-    renderImages(data.hits);
-
-    if (loadedImages >= totalHits) {
-      iziToast.info({ title: 'End', message: "You've reached the end of search results." });
-    } else {
-      showLoadMore();
-    }
-
-  } catch (error) {
-    hideLoader();
-    iziToast.error({ title: 'Error', message: 'Failed to load more images.' });
-  }
-};
-
-form.addEventListener('submit', handleSearch);
-loadMoreBtn.addEventListener('click', loadMoreImages);
